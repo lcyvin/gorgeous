@@ -1,0 +1,7 @@
+github.com/awalterschulze/gographviz v2.0.3+incompatible/go.mod h1:GEV5wmg4YquNw7v1kkyoX9etIk8yVmXj+AkDHuuETHs=
+github.com/blang/semver v3.5.1+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
+github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
+github.com/mattn/go-shellwords v1.0.11/go.mod h1:EZzvwXDESEeg03EKmM+RmDnNOPKG4lLtQsUlTZDWQ8Y=
+github.com/zyedidia/gpeg v0.0.0-20210126031808-c49c92955001/go.mod h1:9nSexfJbFCFx3Arcz+joodU2uaHlxO/jpXr+qCy6ICY=
+github.com/zyedidia/sregx v0.3.0 h1:6oqhhkN74oDktL0l3juJ4ZaLr4jwDznyIZLhHKmMEA8=
+github.com/zyedidia/sregx v0.3.0/go.mod h1:kcTj74WrQKhDUgLMqgCUbFPZEc9Xie9vtmkUhbpfBRA=
