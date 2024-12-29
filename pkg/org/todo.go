@@ -2,6 +2,12 @@ package org
 
 import "fmt"
 
+type TodoSequence struct {
+  ProcessKeywords []string
+  DoneKeywords    []string
+  Kind            TodoSequenceKind
+}
+
 // Todo keywords can be defined as a sequence of either states, represented
 // by all-caps strings containing only alphabet characters, or for backwards
 // compatibility as types, represented by strings of only alphabet characters
@@ -20,9 +26,9 @@ import "fmt"
 //
 // It is recommended to use tags in favor of types where relevant.
 type TodoSettings struct {
-  TypeSequences   [][]string
-  StateSequences  [][]string
-  Sequences       [][]string
+  TypeSequences   []*TodoSequence
+  StateSequences  []*TodoSequence
+  Sequences       []*TodoSequence
   keywords        map[string]struct{}
 }
 
@@ -36,23 +42,37 @@ func (ts *TodoSettings) validate(seq []string) error {
   return nil
 }
 
-func (ts *TodoSettings) Add(seq []string, k TodoSequenceKind) (*TodoSettings, error) {
-  if err := ts.validate(seq); err != nil {
+func (ts *TodoSettings) Add(seq *TodoSequence) (*TodoSettings, error) {
+  newKeys := make(map[string]struct{}, 0)
+
+  allSeqKeys := make([]string, 0)
+  allSeqKeys = append(allSeqKeys, seq.ProcessKeywords...)
+  allSeqKeys = append(allSeqKeys, seq.DoneKeywords...)
+
+  for _, v := range allSeqKeys {
+    _, ok := newKeys[v]; if ok {
+      return nil, NewTodoSequenceKeyCollisionError(v)
+    }
+    newKeys[v] = struct{}{}
+  }
+
+  if err := ts.validate(allSeqKeys); err != nil {
     return nil, err
   }
 
-  switch k {
+  switch seq.Kind {
   case TODO_SEQUENCE_TYPE:
     ts.TypeSequences = append(ts.TypeSequences, seq)
   case TODO_SEQUENCE_STATE:
     ts.StateSequences = append(ts.StateSequences, seq)
-  // in theory, this is unreachable
   default:
     return nil, NewTodoSequenceKindInvalidError()
   }
 
-  for _, k := range seq {
-    ts.keywords[k] = struct{}{}
+  ts.Sequences = append(ts.Sequences, seq)
+
+  for k, v := range newKeys {
+    ts.keywords[k] = v
   }
 
   return ts, nil
@@ -70,7 +90,7 @@ type TodoSequenceKeyCollisionError struct {
 }
 
 func (tskce TodoSequenceKeyCollisionError) Error() string {
-  return fmt.Sprintf("Todo keyword collision: keyword %s is used in another sequence.", tskce.Key)
+  return fmt.Sprintf("Todo keyword collision: keyword %s is used in another sequence or occurs twice.", tskce.Key)
 }
 
 func NewTodoSequenceKeyCollisionError(k string) *TodoSequenceKeyCollisionError {
