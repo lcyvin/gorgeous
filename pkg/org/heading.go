@@ -30,6 +30,16 @@ func (h Heading) IsGreaterElement() bool {
   return true
 }
 
+// GetPriority returns the value held by Heading.Priority, or returns
+// PRIORITY_DEFAULT if none is defined. 
+func (h *Heading) GetPriority() HeadingPriority {
+  if h.Priority != nil {
+    return h.Priority
+  }
+
+  return PriorityExtrema("B")
+}
+
 type InvalidHeadingLevelError struct {
   Lvl int
 }
@@ -52,6 +62,7 @@ type HeadingPriorityKind int
 const (
   HEADING_PRIORITY_INT HeadingPriorityKind = iota
   HEADING_PRIORITY_ALPHA
+  HEADING_PRIORITY_EXTREMA
 )
 
 // Type for handling integer-based heading priorities
@@ -101,4 +112,24 @@ func (ahp AlphaHeadingPriority) Kind() HeadingPriorityKind {
 // Returns the string representation of the priority's value
 func (ahp AlphaHeadingPriority) String() string {
   return string(ahp)
+}
+
+// The priority extrema type is defined to provide context-unaware handling
+// of priority operations, such that a heading element extant outside the
+// context of a tree (for instance, generated programatically and not yet
+// inserted into the tree) can still fulfill required behaviors (eg, sort).
+type PriorityExtrema string
+
+const (
+  PRIORITY_HIGHEST PriorityExtrema = "A"
+  PRIORITY_LOWEST                  = "C"
+  PRIORITY_DEFAULT                 = "B"
+)
+
+func (pe PriorityExtrema) Kind() HeadingPriorityKind {
+  return HEADING_PRIORITY_EXTREMA
+}
+
+func (pe PriorityExtrema) String() string {
+  return string(pe)
 }
