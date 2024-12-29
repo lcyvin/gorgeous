@@ -1,0 +1,37 @@
+#+TITLE: Gorgeous - extensible orgmode data structures for go
+
+* Gorgeous - extensible orgmode data structures for go
+
+Gorgeous aims to provide an extensible, idiomatic set of orgmode data structures in Go.
+While /go-org/ exists and is quite capable, it is a purpose-built tool and becomes
+unweildy when modifying or interacting with the actual contents of the document. As such,
+rather than a replacement for something like /go-org/, Gorgeous aims not to be a specific
+program or utility but instead a set of libraries implementing the various orgmode
+elements, objects, and at least some subset of the api. It is an active work in progress
+and does not yet encapsulate even a fractional support of what orgmode provides. Initial
+work covers the core data structures (trees, subtress, documents) and elements. From
+there, at least a partial subset of the orgmode api msut be implemented in order to handle
+buffer settings, such as ~org-use-property-inheritance~, which effect the
+querying/crawling behaviors on a document. Finally, parsing and writing interfaces must be
+created as well as basic default parsers and writers. The goal at this time is not to
+implement extremely deep parsers and writers, but to allow for seamless interfaces to be
+exposed to developers in order to leverage the other provided libraries.
+
+*** ~pkg/org~
+  The ~org~ package provides the core datastructures and types that comprise an orgmode
+  document, as well as some handlers for validation where applicable, E.G., to validate
+  the values set on a property where a corresponding ~_All~ suffixed property with a list
+  of valid values is present.
+
+*** ~pkg/api~
+  The ~api~ package provides implementations of some portions of the orgmode api,
+  particularly handling of file variables which modify the behavior of how an orgmode
+  client should query or walk through the trees and elements in a document.
+
+** Roadmap
+   - [ ] Majority of org file elements and structures implemented
+   - [ ] Basic support for file variable handling
+   - [ ] Support for setupfile handling
+   - [ ] Extended api support and/or interfaces
+   - [ ] Parsing interface and default parser
+   - [ ] Writing interface and default writer
