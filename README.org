@@ -1,7 +1,5 @@
 #+TITLE: Gorgeous - extensible orgmode data structures for go
 
-* Gorgeous - extensible orgmode data structures for go
-
 Gorgeous aims to provide an extensible, idiomatic set of orgmode data structures in Go.
 While /go-org/ exists and is quite capable, it is a purpose-built tool and becomes
 unweildy when modifying or interacting with the actual contents of the document. As such,
