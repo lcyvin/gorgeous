@@ -5,6 +5,9 @@ import (
 	"strings"
 )
 
+// BufferSettings define various metadata and client behaviors, largely to
+// handle how certain special keywords are handled or to override default
+// values for parts of an element, primarily headings.
 type BufferSettings struct {
   // Tags set by the FILETAGS property, to be inherited by all
   // headilnes within the document.
@@ -64,6 +67,23 @@ type BufferSettings struct {
   // document. When parsing, this should be called if a setupfile setting is
   // encountered.
   SetupFile     *SetupFile
+  // Todo keywords can be defined as a sequence of either states, represented
+  // by all-caps strings containing only alphabet characters, or for backwards
+  // compatibility as types, represented by strings of only alphabet characters
+  // and starting with an uppercase Character. 
+  // In a definition, the sequence "|" occurring in the list of states or types
+  // indicates that all following items represent "done" states. If none is
+  // present, the final element in the list is considered the "done" state.
+  //
+  // Multiple todo sequences may be defined in a file, for instance, for
+  // different workflows. The same key should not be defined in multiple places
+  // in order to allow for proper sequence cycling. E.G.:
+  //
+  //     #+TODO: BACKLOG TODO BLOCKED STARTED REVIEWING STAGED | DONE CANCELLED
+  //     #+TODO: IDEA SPIKE RFC | PLANNED DENIED
+  //     #+TODO: WAITING MEETING CALL EMAIL | HANDLED NOOP
+  //
+  // It is recommended to use tags in favor of types where relevant.
   TodoSettings  *TodoSettings
 }
 
@@ -88,6 +108,7 @@ const (
   HEADING_PRIORITY_ALPHA
 )
 
+// Type for handling integer-based heading priorities
 type IntHeadingPriority int
 
 // Returns true if this heading is higher significance (lower number)
@@ -101,29 +122,37 @@ func (ihp IntHeadingPriority) Equal(p IntHeadingPriority) bool {
   return int(ihp) == int(p)
 }
 
+// Returns HEADING_PRIORITY_INT for type assertion purposes
 func (ihp IntHeadingPriority) Kind() HeadingPriorityKind {
   return HEADING_PRIORITY_INT
 }
 
+// Returns a stringification of the provided value
 func (ihp IntHeadingPriority) String() string {
   return fmt.Sprintf("%d", int(ihp))
 }
 
+// Type for handling alpha-based heading priorities
 type AlphaHeadingPriority string
 
+// Returns true if this heading has a higher significance (earlier
+// alpha character, E.G., A being 'higher' than B) than p
 func (ahp AlphaHeadingPriority) Higher(p AlphaHeadingPriority) bool {
   alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
   return strings.Index(alphabet, string(ahp)) < strings.Index(alphabet, string(p))
 }
 
+// Returns true if this heading's priority is of the same significance as p
 func (ahp AlphaHeadingPriority) Equal(p AlphaHeadingPriority) bool {
   return string(ahp) == string(p)
 }
 
+// Returns HEADING_PRIORITY_ALPHA for type assertion purposes
 func (ahp AlphaHeadingPriority) Kind() HeadingPriorityKind {
   return HEADING_PRIORITY_ALPHA
 }
 
+// Returns the string representation of the priority's value
 func (ahp AlphaHeadingPriority) String() string {
   return string(ahp)
 }
