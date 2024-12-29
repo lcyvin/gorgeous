@@ -27,6 +27,7 @@ exposed to developers in order to leverage the other provided libraries.
   client should query or walk through the trees and elements in a document.
 
 ** Roadmap
+
    - [ ] Majority of org file elements and structures implemented
    - [ ] Basic support for file variable handling
    - [ ] Support for setupfile handling
