@@ -12,8 +12,8 @@ import (
 //
 // For diary expressions (not yet implemented), the type 
 //
-// In an org planning element, the timestamp object can represent a range in 
-// one of two ways:
+// In an org planning element, the timestamp object can represent a time range
+// in one of two ways:
 //     - with a time range: 
 //           <2050-01-01 Sat 00:00-02:00>
 // 
@@ -22,7 +22,14 @@ import (
 //
 // In the above examples, the actual time range is identical, however the first
 // is more compact. For representing tasks and events ocurring across multiple 
-// days, the latter is required. In this library, either form is held as a 
+// days, the latter is required. 
+//
+// Additionally, for an event which occurs on multiple days at a specific time
+// period or time of day, the format used is:
+//
+//    <2050-01-01 Sat 00:00-02:00>--<2050-01-03 Mon 00:00-02:00>
+//
+// In this library, either form is held as a 
 // TimestampRange. In cases where a date time range form is not used, the
 // value of EndDate should be nil.
 type TimestampRange struct {
@@ -31,57 +38,28 @@ type TimestampRange struct {
   // this should default to a time of "00:00", and set the TimeStamp.DateOnly
   // value to "true".
   StartDate *Timestamp
+
   // The end date is present when a timestamp object contains a date time 
   // range. Implementors of file writers can utilize a nil check on this value
   // to determine if the format of a timestamp should be in
   // a time range or date time range format.
   EndDate *Timestamp
+
+  // Allow out-of-band behavior for client compatibility with various clients
+  // that implement some org mode parsing and writing but may not exactly match
+  // vanilla orgmode syntax.
+  Compatibility bool
 }
 
-// Returns a signed int64 value representng the total number of seconds between
-// the StartDate and EndDate, a boolean value representing the validity of the
-// range, and an error if the start occurs after the end. The duration is still
-// returned in the case of an earlier end date than start date, as a negative
-// value. This is done to allow for client-side handling of the data in the 
-// event passing error values is infeasible or undesirable. The boolean value 
-// will only return `true` if there is no error and the start date occurs
-// before the end date. If no EndDate is defined, the returned values are:
-// 0, false, nil if the timestamp defined TimestampRange.StartDate is a 
-// DateOnly timestamp, and *n*, true, nil if the value of Timestamp.IsRange is
-// true, where *n* is the duration returned by Timestamp.Duration()
-func (tr *TimestampRange) Duration() (int64, bool, error) {
-  if tr.StartDate.IsRange {
-    return tr.StartDate.Duration()
+type TimestampRangeOpt func(*TimestampRange)
+
+func WithCompatibility() TimestampRangeOpt {
+  return func(tr *TimestampRange) {
+    tr.Compatibility = true
   }
-
-  if tr.EndDate == nil {
-    
-  }
-
-  start := tr.StartDate.Start
-  end := tr.EndDate.End
-
-  duration := int64(end.Sub(start).Seconds())
-
-  // start can't be after end
-  if start.Compare(end) == 1 {
-    err := NewStartTimeAfterEndTimeError(start, end) 
-    return duration, false,  err
-  }
-
-  return duration, true, nil
 }
 
-// HasDuration is a shorthand to access the bool value returned by 
-// TimestampRange.Duration. It returns true only when both a start and end date
-// are defined, and the duration is non-negative (start occurs before end).
-func (tr *TimestampRange) HasDuration() bool {
-  _, ok, _ := tr.Duration()
-
-  return ok
-}
-
-func NewTimestampRange(start, end *Timestamp) (*TimestampRange, error) {
+func NewTimestampRange(start, end *Timestamp, opts... TimestampRangeOpt) (*TimestampRange, error) {
   if start == nil {
     if end == nil {
       return nil, NewNilTimestampsError()
@@ -90,12 +68,119 @@ func NewTimestampRange(start, end *Timestamp) (*TimestampRange, error) {
     return nil, NewNilStartTimeError()
   }
 
-  tr := &TimestampRange{StartDate: start}
+  tr := &TimestampRange{
+    StartDate: start,
+    Compatibility: false,
+  }
+
   if end != nil {
     tr.EndDate = end
   }
 
+  for _, opt := range opts {
+    opt(tr)
+  }
+
   return tr, nil
+}
+
+// Returns true if the timestamps held by TimestampRange represent a date/time
+// range, E.G.: <2050-01-01 Sat 00:00-02:00>--<2050-01-03 Mon 00:00-02:00>
+func (tr *TimestampRange) IsRecurringRange() bool {
+  return tr.StartDate.IsRange && tr.EndDate.IsRange
+}
+
+// Returns true if the StartDate.Repeat is non-nil
+func (tr *TimestampRange) IsRepeating() bool {
+  return tr.StartDate.Repeat != nil
+}
+
+// Returns true if TimestampRange.StartDate.Active is true
+func (tr *TimestampRange) IsActive() bool {
+  return tr.StartDate.Active
+}
+
+func (tr *TimestampRange) Time() (int, int, int) {
+  return tr.StartDate.Time()
+}
+
+func (tr *TimestampRange) EndTime() (int, int, int) {
+  endExists := tr.EndDate != nil
+  endIsRange := tr.EndDate.IsRange
+  // in theory this should never be true if endIsRange is false, however,
+  // out-of-band behaviors from plugins and varying client implementations 
+  // mean it is worth adding this sanity check.
+  endIsDateOnly := tr.EndDate.DateOnly
+
+  // when the range was defined as a date/time range
+  // <YYYY-MM-DD Day HH:MM-HH:MM>--<YYYY-MM-DD Day HH:MM-HH:MM>
+  if endExists && endIsRange {
+    return tr.EndDate.EndTime()
+  }
+
+  if tr.Compatibility {
+    // when the range was defined as a date range with fixed times on the start 
+    // and end. I don't believe this is a default supported behavior in org, but
+    // other clients (E.G., orgzly-style android org clients) may implement
+    // nonstandard behavior, so we will attempt to handle the obvious edge cases.
+    if endExists && !endIsDateOnly {
+      return tr.EndDate.Time()
+    }
+
+    // As described above, to handle out-of-band implementations and possible
+    // alternate syntaxes or plugin values, we will return an end-of-the-day time
+    // for a date range that hypothetically looked something like:
+    // <YYYY-MM-DD Day HH:MM>--<YYYY-MM-DD Day>
+    if endExists && endIsDateOnly {
+      return 23, 59, 59
+    }
+  }
+
+  return tr.StartDate.EndTime()
+}
+
+// Flips the value of the StartDate.Active and EndDate.Active (if EndDate != nil)
+func (tr *TimestampRange) ToggleActive() *TimestampRange {
+  newState := !tr.StartDate.Active
+
+  tr.StartDate.Active = newState
+  if tr.EndDate != nil {
+    tr.EndDate.Active = newState
+  }
+
+  return tr
+}
+
+// Returns true if the event defined within the TimestampRange occurs within
+// the provided window. This value does not consider active/inactive timestamp
+// status, nor agenda view delay settings. These factors should be handled
+// down-stream, as there are cases where one may want to query events including
+// those whose visibility is normally hidden in a standard agenda view.
+func (tr *TimestampRange) InWindow(start, end time.Time) bool {
+  sWin := tr.StartDate.Within(start, end)
+  eWin := tr.EndDate.Within(start, end)
+
+  return sWin || eWin
+}
+
+type NewTimestampOpt func(*Timestamp)
+
+func (nto NewTimestampOpt) WithEnd(e time.Time) NewTimestampOpt {
+  return func(t *Timestamp) {
+    t.End = e
+  }
+}
+
+func (nto NewTimestampOpt) WithRepeat(r *Repeat) NewTimestampOpt {
+  return func(t *Timestamp) {
+    t.Repeat = r
+  }
+}
+
+func (nto NewTimestampOpt) WithInactive() NewTimestampOpt {
+  return func(t *Timestamp) {
+    t.Active = false
+  }
 }
 
 type Timestamp struct {
@@ -107,6 +192,20 @@ type Timestamp struct {
   Repeat *Repeat
 }
 
+func NewTimestamp(start time.Time, opts... NewTimestampOpt) *Timestamp {
+  ts := &Timestamp{Start: start, IsRange: true}
+  
+  for _, opt := range(opts) {
+    opt(ts)
+  }
+
+  if ts.End.IsZero() {
+    ts.DateOnly = true
+    ts.IsRange = false
+  }
+
+  return ts
+}
 
 // Returns a string representation of the day of the week as expected by org
 // when parsing timestamp objects. For a the full name of the day, use the
@@ -185,7 +284,6 @@ func (ts *Timestamp) Within(start, end time.Time) bool {
     return true
   }
 
-  //TODO implement shift handling
   return false
 }
 

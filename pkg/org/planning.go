@@ -24,24 +24,21 @@ const (
 type TimestampRangeOrSexp interface {
   // Should return out of either TIMESTAMP_KIND_TIMESTAMP or TIMESTAMP_KIND_SEXP
   Kind() TimestampKind
-  // If defined as a range between two dates without a per-day time definition,
-  // the total duration of the time range from the starting time on the starting
-  // date, to the ending time on the ending date (defaults 00:00 and 23:59)
-  // respectively.
-  Duration() (int64, bool, error)
-  // Returns a list of all timestamp instances which are valid within the
-  // supplied date range. When using the TimestampRange data structure, this
-  // will be TimestampRange.StartDate if TimestampRange.EndDate falls outside
-  // the window, or both if the window encapsulates the whole range.
+
+  // Returns true if the planning event held by the TimestampRange or sexp 
+  // definition should be visible in an agenda view for the given window. 
+  // Futher filtering, implementors should operate on the timestamps which
+  // are valid for the window. For instance, an event with a delay that would
+  // negate its display in the window is still considered valid at this level.
   //
-  // If the timestamp(s) defined within a TimestampRange use repeat directives,
-  // the return will be a single Timestamp. Extrapolation of that timestamp to
-  // an agenda-like set of generated Timestamps can then be performed with that
-  // return value.
-  Instances(start, end time.Time) []*Timestamp
+  // Intended use pattern is to query for window tenancy, then handle further
+  // filtering and data handling after type assertion based on the TimestampKind.
+  InWindow(start, end time.Time) bool
+
   // Returns the time of day that the timestamp defines as the start, if a start
   // time is present. Else, returns 0, 0, 0
   Time() (int, int, int)
+  
   // Returns the time of day that the timestamp defines as the end of the time
   // range, if a time range is set. Else, returns 0, 0, 0.
   EndTime() (int, int, int)
@@ -55,3 +52,35 @@ const (
   TIMESTAMP_KIND_TIMESTAMP = "timestamp"
   TIMESTAMP_KIND_SEXP = "sexp"
 )
+
+type RepeatStamp interface {
+  // Return the starting time of the timestamp object having a repeater, if one
+  // is present.
+  Start() time.Time
+  // Return the ending time of the timestamp object having a repeater, if one is
+  // present.
+  End() time.Time
+  // For implementors, return a custom Kind for the RepeatStamp for type assertion
+  Kind() interface{}
+  // string representation of the repeat directive (aka cookie) as would appear
+  // within an org document (E.G., +1m)
+  Cookie() string
+  // Return true if this refers to an active timestamp, in orgmode terms
+  Active() bool
+  // Return true if the RepeatStamp would occur within the passed window, based
+  // on the repeat cookie and implemented repetition logic.
+  InWindow(start, end time.Time) bool
+}
+
+type Repeater interface {
+  // Perform a single shift on a RepeatStamp based on the cookie it holds.
+  Shift() RepeatStamp
+  // Perform <n> shifts on a RepeatStamp based on the cookie it holds.
+  Shiftn(i int) RepeatStamp
+  // Perform as many shifts on a RepeatStamp as needed until it is less than or
+  // equal to the time passed to in t
+  ShiftUntil(t time.Time) RepeatStamp
+  // Perform as many shifts on a RepeatStamp as needed to be in the future of
+  // the time passed to t
+  ShiftUntilAfter(t time.Time) RepeatStamp
+}
