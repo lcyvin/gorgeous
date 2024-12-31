@@ -33,6 +33,7 @@ const (
   ELEMENT_NODE_PROPERTY
   ELEMENT_PARAGRAPH
   ELEMENT_TABLE_ROW
+  ELEMENT_DIARY_SEXP //TODO
 )
 
 // Legible strings for error and debug output purposes

@@ -14,12 +14,13 @@ import (
 // property. Other heritable items (e.g., properties) are handled at the
 // node level.
 type Heading struct {
-  Text        string
-  Priority    HeadingPriority
-  IsComment   bool
-  Tags        []string
-  Level       int
-  Node        *Node
+  Text string
+  Priority HeadingPriority
+  IsComment bool
+  Tags []string
+  Level int
+  Planning *Planning
+  Node *Node
 }
 
 func (h Heading) Kind() ElementKind {
