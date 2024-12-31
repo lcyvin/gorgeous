@@ -151,14 +151,18 @@ func (tr *TimestampRange) ToggleActive() *TimestampRange {
   return tr
 }
 
+func (tr *TimestampRange) Kind() TimestampKind {
+  return TIMESTAMP_KIND_TIMESTAMP_RANGE
+}
+
 // Returns true if the event defined within the TimestampRange occurs within
 // the provided window. This value does not consider active/inactive timestamp
 // status, nor agenda view delay settings. These factors should be handled
 // down-stream, as there are cases where one may want to query events including
 // those whose visibility is normally hidden in a standard agenda view.
 func (tr *TimestampRange) InWindow(start, end time.Time) bool {
-  sWin := tr.StartDate.Within(start, end)
-  eWin := tr.EndDate.Within(start, end)
+  sWin := tr.StartDate.InWindow(start, end)
+  eWin := tr.EndDate.InWindow(start, end)
 
   return sWin || eWin
 }
@@ -174,6 +178,11 @@ func (nto NewTimestampOpt) WithEnd(e time.Time) NewTimestampOpt {
 func (nto NewTimestampOpt) WithRepeat(r *Repeat) NewTimestampOpt {
   return func(t *Timestamp) {
     t.Repeat = r
+    rawCookieStr := "%s%d%s"
+    shiftStr := r.Kind.String()
+    amt := r.IntervalAmount
+    shiftInterval := r.Interval.String()
+    t.RawCookie = fmt.Sprintf(rawCookieStr, shiftStr, amt, shiftInterval)
   }
 }
 
@@ -190,6 +199,7 @@ type Timestamp struct {
   Active bool
   IsRange bool
   Repeat *Repeat
+  RawCookie string
 }
 
 func NewTimestamp(start time.Time, opts... NewTimestampOpt) *Timestamp {
@@ -276,7 +286,7 @@ func (ts *Timestamp) Duration() (int64, bool, error) {
 // provided window. Note that depending on the kind of repetition, the
 // validity of this response is only valid until the timestamp is updated on
 // a state change.
-func (ts *Timestamp) Within(start, end time.Time) bool {
+func (ts *Timestamp) InWindow(start, end time.Time) bool {
   startsWithinWindow := ts.Start.After(start) && ts.Start.Before(end)
   endsWithinWindow := ts.End.Before(end) && ts.End.After(start)
 
@@ -287,6 +297,25 @@ func (ts *Timestamp) Within(start, end time.Time) bool {
   return false
 }
 
+func (ts Timestamp) Kind() TimestampKind {
+  return TIMESTAMP_KIND_TIMESTAMP
+}
+
+func (ts *Timestamp) Cookie() string {
+  if ts.Repeat == nil {
+    return ""
+  }
+
+  if ts.RawCookie == "" {
+    return fmt.Sprintf("%s%d%s", 
+      ts.Repeat.Kind.String(),
+      ts.Repeat.IntervalAmount,
+      ts.Repeat.Interval.String(),
+      )
+  }
+
+  return ts.RawCookie
+}
 
 // Repeat holds the specific information related to a repeating task or
 // deadline as needed for filtering and displaying agenda views, as well as
@@ -301,6 +330,12 @@ type Repeat struct {
   //      time until it is in the future, does not preserve day-of-week.
   //      (minimum shift of 1 interval)
   Kind RepeatKind
+
+  // Controls the number of times the interval is applied on repetition, E.G.:
+  //    +1m == 1*REPEAT_INTERVAL_MONTH
+  //    +3d == 3*REPEAT_INTERVAL_DAY
+  IntervalAmount int
+
   // Controls the total amount of time an interval represents. One of:
   //    - REPEAT_INTERVAL_HOUR
   //    - REPEAT_INTERVAL_DAY
@@ -312,6 +347,7 @@ type Repeat struct {
   // different org clients. The specific behavior of a 1 month shift in this
   // library has two modes, set by RelativeMonth.
   Interval RepeatIntervalKind
+
   // Sets the point at which an agenda item either appears in the agenda view.
   // Behaves different dependent on the kind of planning element it belongs to.
   //    - SCHEDULED: delays the appearance of the item in the agenda view by
@@ -319,6 +355,7 @@ type Repeat struct {
   //    - DEADLINE: displays the warning ahead of the deadline by the duration
   //      amount. 
   AgendaWindow time.Duration
+
   // Because of inconsistencies with month intervals, this is an internally
   // available flag to control how an interval of +1m is set. When false,
   // the shift will always be 30 days (golang's normalized month value). With
