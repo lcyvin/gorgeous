@@ -42,6 +42,8 @@ type TimestampRangeOrSexp interface {
   // Returns the time of day that the timestamp defines as the end of the time
   // range, if a time range is set. Else, returns 0, 0, 0.
   EndTime() (int, int, int)
+
+  // Returns an array of timestamp elements 
 }
 
 type TimestampKind string

@@ -37,24 +37,3 @@ type Repeater interface {
   // the time passed to t
   ShiftUntilAfter(t time.Time) RepeatStamp
 }
-
-// TODO - just stubbing this out at the moment.
-type RepeatTimestamp struct {
-  Start time.Time
-  End time.Time
-  DateOnly bool
-  Active bool
-  Repeat *org.Repeat
-  RawCookie string
-  Config *RepeatConfig
-}
-
-func (rt *RepeatTimestamp) InWindow(start, end time.Time) bool {
-
-  return false
-}
-
-type RepeatConfig struct {
-
-}
-// ENDTODO
