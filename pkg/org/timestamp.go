@@ -169,13 +169,13 @@ func (tr *TimestampRange) InWindow(start, end time.Time) bool {
 
 type NewTimestampOpt func(*Timestamp)
 
-func (nto NewTimestampOpt) WithEnd(e time.Time) NewTimestampOpt {
+func WithEnd(e time.Time) NewTimestampOpt {
   return func(t *Timestamp) {
     t.End = e
   }
 }
 
-func (nto NewTimestampOpt) WithRepeat(r *Repeat) NewTimestampOpt {
+func WithRepeat(r *Repeat) NewTimestampOpt {
   return func(t *Timestamp) {
     t.Repeat = r
     rawCookieStr := "%s%d%s"
@@ -186,7 +186,7 @@ func (nto NewTimestampOpt) WithRepeat(r *Repeat) NewTimestampOpt {
   }
 }
 
-func (nto NewTimestampOpt) WithInactive() NewTimestampOpt {
+func WithInactive() NewTimestampOpt {
   return func(t *Timestamp) {
     t.Active = false
   }

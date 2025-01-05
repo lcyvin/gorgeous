@@ -39,11 +39,9 @@ func (pd *PropertyDrawer) Add(p *Property) *PropertyDrawer {
 func (pd *PropertyDrawer) Heritable() *PropertyDrawer {
   ipd := &PropertyDrawer{}
   for _, v := range pd.Properties {
-    if v.Inheritable {
-      // again using functional style assignment rather than implicitly
-      // modifying the value.
-      ipd = ipd.Add(v)
-    }
+    // again using functional style assignment rather than implicitly
+    // modifying the value.
+    ipd = ipd.Add(v)
   }
 
   return ipd

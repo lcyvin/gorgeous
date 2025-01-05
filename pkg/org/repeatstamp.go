@@ -1,13 +1,14 @@
 package org
 
 import (
-  "time"
+	"time"
 )
 
 var DefaultRepeatConfig RepeatConfig = RepeatConfig{
-  ClampToEndOfMonth: true,
+  ClampToEndOfMonth: false,
   ShiftByDays: false,
   FixedDate: true,
+  Location: time.Now().Location(),
 }
 
 type RepeatConfig struct {
@@ -110,13 +111,13 @@ func (rs *RepeatStamp) Shiftn(i int) *RepeatStamp {
   amt := rs.Repeat.IntervalAmount
   switch rs.Repeat.Interval {
   case REPEAT_INTERVAL_HOUR:
-    return rs.shiftByHours(amt)
+    return rs.shiftByHours(amt*i)
   case REPEAT_INTERVAL_DAY:
-    return rs.shiftByDays(amt)
+    return rs.shiftByDays(amt*i)
   case REPEAT_INTERVAL_WEEK:
-    return rs.shiftByWeeks(amt)
+    return rs.shiftByWeeks(amt*i)
   case REPEAT_INTERVAL_MONTH:
-    o, err := rs.shiftByMonths(amt)
+    o, err := rs.shiftByMonths(amt*i)
     if err != nil {
       panic(err)
     }
@@ -131,7 +132,6 @@ func (rs *RepeatStamp) Shiftn(i int) *RepeatStamp {
 
 func (rs *RepeatStamp) ShiftUntil(t time.Time) *RepeatStamp {
   nrs := *rs
-  
   one := rs.Shiftn(1)
   next := one.Shiftn(1)
   delta := one.Start.Sub(rs.Start)
@@ -213,10 +213,10 @@ func (rs *RepeatStamp) shiftByDays(i int) *RepeatStamp {
 func (rs *RepeatStamp) shiftByWeeks(i int) *RepeatStamp {
   nrs := *rs
   
-  nrs.Start = rs.Start.AddDate(0, i, 0)
+  nrs.Start = rs.Start.AddDate(0, 0, i*7)
 
   if !rs.End.IsZero() {
-    nrs.End = rs.End.AddDate(0, i, 0)
+    nrs.End = rs.End.AddDate(0, 0, i*7)
   }
 
   return &nrs
@@ -227,13 +227,18 @@ func (rs *RepeatStamp) shiftByWeeks(i int) *RepeatStamp {
 func (rs *RepeatStamp) shiftByMonths(i int) (*RepeatStamp, error) {
   nrs := *rs
 
-  irs := rs
+  irs := *rs
   for iter := 0; iter < i; iter++ {
     next, err := irs.shiftByMonth()
     if err != nil {
       return nil, err
     }
-    irs = next
+    irs = *next
+  }
+
+  nrs.Start = irs.Start
+  if !irs.End.IsZero() {
+    nrs.End = irs.End
   }
 
   return &nrs, nil
