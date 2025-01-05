@@ -78,7 +78,32 @@ func (rs *RepeatStamp) InWindow(start, end time.Time) bool {
 // (E.G., the cookie is ++7d, but you wish to shift by one week from the
 // timestamp's held date), use Shiftn()
 func (rs *RepeatStamp) Shift() *RepeatStamp {
-  return &RepeatStamp{}  
+  switch rs.Repeat.Kind {
+  case REPEAT_KIND_SHIFT:
+    return rs.Shiftn(rs.Repeat.IntervalAmount)
+  case REPEAT_KIND_SHIFT_FUTURE_FIXED:
+    return rs.ShiftUntilAfter(time.Now())
+  // I'm not certain you can have hourly shifts with a time range, but let's
+  // pretend you can and preserve the duration of the range.
+  case REPEAT_KIND_SHIFT_FUTURE_RELATIVE:
+    nrs := *rs
+    now := time.Now()
+    duration := time.Duration(0)
+
+    if rs.IsRange {
+      duration = rs.End.Sub(rs.Start)
+    }
+
+    nrs.Start = now
+    
+    if !rs.End.IsZero() {
+      nrs.End = nrs.Start.Add(duration)
+    }
+
+    return nrs.Shiftn(1)
+  default:
+    return nil
+  }
 }
 
 func (rs *RepeatStamp) Shiftn(i int) *RepeatStamp {
