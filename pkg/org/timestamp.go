@@ -192,6 +192,12 @@ func WithInactive() NewTimestampOpt {
   }
 }
 
+func WithDateOnly() NewTimestampOpt {
+  return func(t *Timestamp) {
+    t.DateOnly = true
+  }
+}
+
 type Timestamp struct {
   Start time.Time
   End time.Time
@@ -210,7 +216,6 @@ func NewTimestamp(start time.Time, opts... NewTimestampOpt) *Timestamp {
   }
 
   if ts.End.IsZero() {
-    ts.DateOnly = true
     ts.IsRange = false
   }
 
@@ -376,9 +381,9 @@ const (
   // sentinel
   REPEAT_KIND_UNKNOWN RepeatKind = ""
   // valid repeat shift markers
-  REPEAT_KIND_SHIFT                 = "+"
-  REPEAT_KIND_SHIFT_FUTURE_FIXED    = "++"
-  REPEAT_KIND_SHIFT_FUTURE_RELATIVE = ".+"
+  REPEAT_KIND_SHIFT                 RepeatKind = "+"
+  REPEAT_KIND_SHIFT_FUTURE_FIXED    RepeatKind = "++"
+  REPEAT_KIND_SHIFT_FUTURE_RELATIVE RepeatKind = ".+"
 )
 
 func (rk RepeatKind) String() string {
@@ -391,11 +396,11 @@ const (
   // sentinel
   REPEAT_INTERVAL_UNKNOWN RepeatIntervalKind = ""
   // valid interval markers
-  REPEAT_INTERVAL_HOUR  = "h"
-  REPEAT_INTERVAL_DAY   = "d"
-  REPEAT_INTERVAL_WEEK  = "w"
-  REPEAT_INTERVAL_MONTH = "m"
-  REPEAT_INTERVAL_YEAR  = "y"
+  REPEAT_INTERVAL_HOUR  RepeatIntervalKind = "h"
+  REPEAT_INTERVAL_DAY   RepeatIntervalKind = "d"
+  REPEAT_INTERVAL_WEEK  RepeatIntervalKind = "w"
+  REPEAT_INTERVAL_MONTH RepeatIntervalKind = "m"
+  REPEAT_INTERVAL_YEAR  RepeatIntervalKind = "y"
 )
 
 func (rik RepeatIntervalKind) String() string {

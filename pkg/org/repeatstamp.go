@@ -66,6 +66,15 @@ func NewRepeatStampFromTimestamp(ts *Timestamp, cfg RepeatConfig) *RepeatStamp {
   }
 }
 
+func NewRepeatStamp(start time.Time, cfg RepeatConfig, opts... NewTimestampOpt) *RepeatStamp {
+  rs := &RepeatStamp{
+    Timestamp: *NewTimestamp(start, opts...),
+    RepeatConfig: cfg,
+  }
+
+  return rs
+}
+
 func (rs *RepeatStamp) InWindow(start, end time.Time) bool {
   
   return false
@@ -78,17 +87,24 @@ func (rs *RepeatStamp) InWindow(start, end time.Time) bool {
 // if you wish to perform a shift other than the one specified by the cookie
 // (E.G., the cookie is ++7d, but you wish to shift by one week from the
 // timestamp's held date), use Shiftn()
-func (rs *RepeatStamp) Shift() *RepeatStamp {
+func (rs *RepeatStamp) Shift(t time.Time) *RepeatStamp {
   switch rs.Repeat.Kind {
   case REPEAT_KIND_SHIFT:
     return rs.Shiftn(rs.Repeat.IntervalAmount)
   case REPEAT_KIND_SHIFT_FUTURE_FIXED:
-    return rs.ShiftUntilAfter(time.Now())
+    if t.IsZero() {
+      t = time.Now()
+    }
+    return rs.ShiftUntilAfter(t)
   // I'm not certain you can have hourly shifts with a time range, but let's
   // pretend you can and preserve the duration of the range.
   case REPEAT_KIND_SHIFT_FUTURE_RELATIVE:
     nrs := *rs
     now := time.Now()
+    if !t.IsZero() {
+      now = t
+    }
+
     duration := time.Duration(0)
 
     if rs.IsRange {
