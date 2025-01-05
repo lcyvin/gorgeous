@@ -2,7 +2,6 @@ package api
 
 import (
   "time"
-  "github.com/lcyvin/gorgeous/pkg/org"
 )
 
 type RepeatStamp interface {
@@ -31,7 +30,7 @@ type Repeater interface {
   // Perform <n> shifts on a RepeatStamp based on the cookie it holds.
   Shiftn(i int) RepeatStamp
   // Perform as many shifts on a RepeatStamp as needed until it is less than or
-  // equal to the time passed to in t
+  // equal to the time passed to t
   ShiftUntil(t time.Time) RepeatStamp
   // Perform as many shifts on a RepeatStamp as needed to be in the future of
   // the time passed to t
