@@ -1,13 +1,10 @@
 package org
 
+import "github.com/lcyvin/gorgeous/internal/util"
+
 type Document struct {
-  // A list containing each node in order of parsing where the int value
-  // refers to the list index of the node's parent. For a first-level Node,
-  // this will always be `0`. For Any node at a lower level than 1, it will
-  // be the most recent node occurring at a higher level. Id est, in a Document
-  // wherein the first heading occurs at a level of `2`, the most recent
-  // higher-level node would still be the zero-th node.
-  Nodes          []*MetaNode
+  NodeTree *MetaNodeTree
+
   // BufferSettings define "client" behaviors when parsing and interpretting the
   // data structures and heritability of properties, tags, etc. within an org
   // document.
@@ -17,14 +14,9 @@ type Document struct {
 // Instantiate a new blank document with base defaults as needed to handle
 // compatibility with orgmode behaviors. 
 func New() *Document {
-  d := &Document{}
-  d.Nodes = []*MetaNode{
-    &MetaNode{
-      ParentIdx: 0,
-      Node: &Node{
-        Index: 0,
-        Document: d,
-  }}}
+  d := &Document{
+    NodeTree: NewMetaNodeTree(),
+  }
 
   bufSettings := &BufferSettings{}
   todoSettings := &TodoSettings{}
@@ -48,19 +40,136 @@ func New() *Document {
   return d
 }
 
-// MetaNode describes the given node's position within the document as well as
-// its position within the overall node tree. Individual nodes do not hold
-// direct references to their child nodes in favor of this structure, in order
-// to allow for top-down processing of operations such as refiling and
-// inheritance, as in org's own api implementation.
-type MetaNode struct {
-  // Refers to the index within Document.Nodes of the node which is above the
-  // given node in the parent tree. If this is the zero-th node, it refers to
-  // itself.
-  ParentIdx int
-  // Points to the actual node itself in order to allow for operating on the
-  // elements contained within said node
-  Node      *Node
+type MetaNodeTree struct {
+  Parent *MetaNodeTree
+  Node *Node
+  Subtree []*MetaNodeTree
+}
+
+func NewMetaNodeTree() *MetaNodeTree {
+  nmt := &MetaNodeTree{
+    Parent: nil,
+    Node: &Node{},
+    Subtree: make([]*MetaNodeTree, 0),
+  }
+  nmt.Node.Tree = nmt
+
+  return nmt
+}
+
+
+func (mnt *MetaNodeTree) GetEndNodes() []*MetaNodeTree {
+  out := make([]*MetaNodeTree, 0)
+  for _, v := range mnt.Subtree {
+    if len(v.Subtree) == 0 {
+      out = append(out, v)
+    }
+  }
+
+  return out
+}
+
+func (mnt *MetaNodeTree) AddNode(n *Node) *MetaNodeTree {
+  newMetaNode := &MetaNodeTree{
+    Node: n,
+    Parent: mnt,
+  }
+
+  mnt.Subtree = append(mnt.Subtree, newMetaNode)
+
+  return mnt
+}
+
+func (mnt *MetaNodeTree) AddSubtree(st *MetaNodeTree) *MetaNodeTree {
+  mnt.Subtree = append(mnt.Subtree, st)
+  return mnt
+}
+
+func (mnt *MetaNodeTree) Level() int {
+  return mnt.Node.Level()
+}
+
+func (mnt *MetaNodeTree) WalkBackToLevel(targetLvl int) *MetaNodeTree {
+  if mnt.Level() <= targetLvl {
+    return mnt
+  }
+
+  tree := mnt.Parent
+
+  for lvl := tree.Level(); lvl <= targetLvl; tree = tree.Parent {
+    if lvl <= targetLvl {
+      return tree
+    }
+  }
+
+  return nil
+}
+
+func (mnt *MetaNodeTree) InheritTags(include, exclude []string, all bool) []string {
+  upstreamTags := make([]string, 0)
+
+  if len(include) == 0 && !all {
+    return upstreamTags
+  }
+
+  for _, v := range mnt.Parent.GetNodeTags() {
+    pass := false
+    if !util.In(v, include) && !all {
+      pass = true
+    }
+
+    if util.In(v, exclude) && all {
+      pass = true
+    }
+
+    if pass {
+      continue
+    }
+
+    upstreamTags = append(upstreamTags, v)
+  }
+
+  if mnt.Parent.Level() != 0 {
+    upstreamTags = mnt.Parent.InheritTags(include, exclude, all)
+  }
+
+  return upstreamTags
+}
+
+func (mnt *MetaNodeTree) GetNodeTags() []string {
+  if mnt.Node.Heading == nil {
+    return make([]string, 0)
+  }
+
+  return mnt.Node.Heading.Tags
+}
+
+func (mnt *MetaNodeTree) GetNodesByProperties(propMap map[string][]string) []*Node {
+  nodes := make([]*Node, 0)
+  this := mnt.Node
+  
+  for _, prop := range this.Properties {
+    if v, ok := propMap[prop.Key]; ok {
+      if util.In(prop.Value, v) {
+        nodes = append(nodes, this)
+      }
+    }
+  }
+
+  for _, v := range mnt.Subtree {
+    subtreeNodes := v.GetNodesByProperties(propMap)
+    if len(subtreeNodes) > 0 {
+      nodes = append(nodes, subtreeNodes...)
+    }
+  }
+
+  return nodes
+}
+
+type TagInheritOpts struct {
+  InheritAll bool
+  Inherit []string
+  NoInherit []string
 }
 
 // HeadingOpt funcs provide handlers to control the instantiation of a new
@@ -121,59 +230,24 @@ func (d *Document) AddHeading(lvl int, text string, opts... HeadingOpt) (*Docume
     Document: d,
   }
 
-  doc, _, err := d.InsertMetaNode(n)
-  if err != nil {
-    return nil, err
+  if lvl == 1 {
+    d.NodeTree.AddNode(n)
+    return d, nil
   }
 
-  return doc, nil
-}
+  endNodes := d.NodeTree.GetEndNodes()
+  lastNode := endNodes[len(endNodes)-1]
 
-// Inserts a MetaNode entry to the end of the Document.Nodes list, returning
-// a pointer to the modified document, and the meta node itself, and may
-// additionally return an error.
-func (d *Document) InsertMetaNode(n *Node) (*Document, *MetaNode, error) {
-  if n == nil {
-    return nil, nil, &NilMetaNodeError{}
+  if lastNode.Level() < lvl {
+    lastNode.AddNode(n)
   }
 
-  if n.Heading == nil {
-    return nil, nil, &NilNodeHeadingError{}
+  if lastNode.Level() >= lvl {
+    parent := lastNode.WalkBackToLevel(lvl-1)
+    parent.AddNode(n)
   }
 
-  // set n.Index to -1 in order to signal we have not processed it, and to
-  // prevent default assignment related issues.
-  n.Index = -1
-
-  mn := &MetaNode{Node: n}
-
-  // determine MetaNode's parent based on heading level if it is not "1"
-  for i := len(d.Nodes)-1; i >= 0; i-- {
-    // we handle the default case of a new node with a heading of lvl 1 being
-    // owned by the zero-th node in the first loop instantiation to avoid heavy
-    // nesting
-    if n.Heading.Level == 1 {
-      mn.ParentIdx = 0
-      n.Index = len(d.Nodes)
-      d.Nodes = append(d.Nodes, mn)
-      break
-    }
-
-    if nodeHdg := d.Nodes[i].Node.Heading; nodeHdg != nil {
-      if nodeHdg.Level < n.Heading.Level {
-        mn.ParentIdx = i
-        n.Index = len(d.Nodes)
-        d.Nodes = append(d.Nodes, mn)
-        break
-      }
-    }
-  }
-
-  if n.Index < 0 {
-    return nil, nil, UnknownInsertError{}
-  }
-
-  return d, mn, nil
+  return d, nil
 }
 
 type NilMetaNodeError struct {}
