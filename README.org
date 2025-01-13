@@ -26,6 +26,10 @@ exposed to developers in order to leverage the other provided libraries.
   particularly handling of file variables which modify the behavior of how an orgmode
   client should query or walk through the trees and elements in a document.
 
+*** ~pkg/extra~
+  The ~extra~ directory contains packages that implement various custom features for
+    convenience. Currently only contains an ICS to org agenda tree package at
+    ~pkg/extra/cal~
 ** Roadmap
 
    - [ ] Majority of org file elements and structures implemented
