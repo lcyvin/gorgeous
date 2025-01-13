@@ -209,7 +209,7 @@ type Timestamp struct {
 }
 
 func NewTimestamp(start time.Time, opts... NewTimestampOpt) *Timestamp {
-  ts := &Timestamp{Start: start, IsRange: true}
+  ts := &Timestamp{Start: start, IsRange: true, Active: true}
   
   for _, opt := range(opts) {
     opt(ts)

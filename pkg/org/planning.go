@@ -17,8 +17,8 @@ const (
   PLANNING_EVENT PlanningKind = ""
   // We expect to see these keywords depending on which keyword preceedes
   // the timestamp
-  PLANNING_SCHEDULED = "SCHEDULED"
-  PLANNING_DEADLINE = "DEADLINE"
+  PLANNING_SCHEDULED PlanningKind = "SCHEDULED"
+  PLANNING_DEADLINE  PlanningKind = "DEADLINE"
 )
 
 type TimestampRangeOrSexp interface {

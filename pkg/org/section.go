@@ -11,7 +11,7 @@ type Section struct {
   // Collection of all elements within the section. In order
   // to handle the various element types, type inference will 
   // be necessary based on the `Element.Kind()` output.
-  Elements  []*Element
+  Elements  []Element
   // Raw byte array containing the data used to parse this section,
   // when built using a parser. This is useful for debugging
   // purposes when implementing parser rules or when parsing mishandles

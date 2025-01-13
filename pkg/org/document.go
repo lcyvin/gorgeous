@@ -8,6 +8,19 @@ type Document struct {
   // data structures and heritability of properties, tags, etc. within an org
   // document.
   BufferSettings *BufferSettings
+  
+  // Title of the document if set. For plugins and utilities that leverage this
+  // library, this could for instance be a shared calendar title
+  Title string
+
+  // Path to the file where this document's data is stored. Not always present,
+  // for instance when a document represents a generated tree scope from an
+  // imported calendar or other source.
+  Path string
+
+  // If this document does not refer to a real file on disk, virtual should
+  // ideally be set to `true` to signify this fact to parsers/writers/etc.
+  Virtual bool
 }
 
 // Instantiate a new blank document with base defaults as needed to handle
@@ -15,6 +28,8 @@ type Document struct {
 func New() *Document {
   d := &Document{
     NodeTree: NewMetaNodeTree(),
+    Virtual: false,
+    Path: "",
   }
 
   bufSettings := &BufferSettings{}

@@ -2,4 +2,6 @@ module github.com/lcyvin/gorgeous
 
 go 1.23.4
 
-require github.com/zyedidia/sregx v0.3.0
+require github.com/apognu/gocal v0.9.1
+
+require github.com/ChannelMeter/iso8601duration v0.0.0-20150204201828-8da3af7a2a61 // indirect
