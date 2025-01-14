@@ -1,6 +1,14 @@
 package org
 
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
+
 type Drawer struct {
+  Name string
+  Elements []Element
 }
 
 func (d Drawer) Kind() ElementKind {
@@ -9,6 +17,38 @@ func (d Drawer) Kind() ElementKind {
 
 func (d Drawer) IsGreaterElement() bool {
   return true
+}
+
+func (d *Drawer) String() string {
+  return strings.Join(d.Strings(), "\n")
+}
+
+func (d *Drawer) Strings() []string {
+  out := make([]string, 0)
+  dOpen := fmt.Sprintf(":%s:", strings.ToUpper(d.Name))
+  dClose := fmt.Sprintf(":END:")
+  out = append(out, dOpen)
+
+  for _, elem := range d.Elements {
+    out = append(out, elem.Strings()...)
+  }
+
+  return append(out, dClose)
+}
+
+func (d *Drawer) AddElement(e Element) (*Drawer, error) {
+  switch e.Kind() {
+  case ELEMENT_HEADING:
+    fallthrough
+  case ELEMENT_DRAWER:
+    fallthrough
+  case ELEMENT_PROPERTY_DRAWER:
+    return nil, errors.New("Invalid element kind for drawer")
+  }
+
+  d.Elements = append(d.Elements, e)
+
+  return d, nil
 }
 
 type PropertyDrawer struct {

@@ -1,8 +1,10 @@
 package org
 
 type Element interface {
-  Kind()              ElementKind
-  IsGreaterElement()  bool
+  Kind() ElementKind
+  IsGreaterElement() bool
+  String() string
+  Strings() []string
 }
 
 type ElementKind int

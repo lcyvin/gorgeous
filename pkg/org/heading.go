@@ -19,6 +19,7 @@ type Heading struct {
   IsComment bool
   Tags []string
   Level int
+  TodoKeyword string
   Planning *Planning
   Node *Node
 }
@@ -29,6 +30,47 @@ func (h Heading) Kind() ElementKind {
 
 func (h Heading) IsGreaterElement() bool {
   return true
+}
+
+// Returns a string of all components of the heading, joined by a single space.
+// This is largely intended for debug purposes and to fulfill the requirements
+// of the Element interface.
+func (h *Heading) String() string {
+  return strings.Join(h.Strings(), " ")
+}
+
+// Returns a list of all components of the heading in syntactical order.
+// LEVEL [KEYWORD] [PRIORITY] [COMMENT] [TITLE] [TAGS]
+func (h *Heading) Strings() []string {
+  out := make([]string, 0)
+  out = append(out, strings.Repeat("*", h.Level))
+  
+  if h.TodoKeyword != "" {
+    out = append(out, h.TodoKeyword)
+  }
+
+  if h.Priority != nil {
+    out = append(out, fmt.Sprintf("[#%s]", h.Priority.String()))
+  }
+
+  if h.IsComment {
+    out = append(out, "COMMENT")
+  }
+
+  if h.Text != "" {
+    out = append(out, h.Text)
+  }
+
+  tagStr := ":"
+  for _, tag := range h.Tags {
+    tagStr += tag + ":"
+  }
+
+  if tagStr != ":" {
+    out = append(out, tagStr)
+  }
+
+  return out
 }
 
 // GetPriority returns the value held by Heading.Priority, or returns
