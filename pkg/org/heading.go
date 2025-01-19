@@ -20,7 +20,7 @@ type Heading struct {
   Tags []string
   Level int
   TodoKeyword string
-  Planning *Planning
+  Planning []*Planning
   Node *Node
 }
 

@@ -2,6 +2,7 @@ package org
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -10,26 +11,26 @@ import (
 // access basic scheduling information without the need to directly use the
 // time.Time values held by each Timestamp.
 //
-// For diary expressions (not yet implemented), the type 
+// For diary expressions (not yet implemented), the type
 //
 // In an org planning element, the timestamp object can represent a time range
 // in one of two ways:
-//     - with a time range: 
+//     - with a time range:
 //           <2050-01-01 Sat 00:00-02:00>
-// 
+//
 //     - with a date time range:
 //           <2050-01-01 Sat 00:00>--<2050-01-01 Sat 02:00>
 //
 // In the above examples, the actual time range is identical, however the first
-// is more compact. For representing tasks and events ocurring across multiple 
-// days, the latter is required. 
+// is more compact. For representing tasks and events ocurring across multiple
+// days, the latter is required.
 //
 // Additionally, for an event which occurs on multiple days at a specific time
 // period or time of day, the format used is:
 //
 //    <2050-01-01 Sat 00:00-02:00>--<2050-01-03 Mon 00:00-02:00>
 //
-// In this library, either form is held as a 
+// In this library, either form is held as a
 // TimestampRange. In cases where a date time range form is not used, the
 // value of EndDate should be nil.
 type TimestampRange struct {
@@ -40,7 +41,7 @@ type TimestampRange struct {
   StartDate *Timestamp
 
   // The end date is present when a timestamp object contains a date time 
-  // range. Implementors of file writers can utilize a nil check on this value
+  // range. Implementers of file writers can utilize a nil check on this value
   // to determine if the format of a timestamp should be in
   // a time range or date time range format.
   EndDate *Timestamp
@@ -73,15 +74,28 @@ func NewTimestampRange(start, end *Timestamp, opts... TimestampRangeOpt) (*Times
     Compatibility: false,
   }
 
-  if end != nil {
-    tr.EndDate = end
+  if end == nil {
+    return nil, NewNilTimestampsError()
   }
+
+  tr.EndDate = end
 
   for _, opt := range opts {
     opt(tr)
   }
 
   return tr, nil
+}
+
+func (tr *TimestampRange) String() string {
+  strs := tr.Strings()
+  out := strings.Join(strs, "--")
+
+  return out
+}
+
+func (tr *TimestampRange) Strings() []string {
+  return append(tr.StartDate.Strings(), tr.EndDate.String())
 }
 
 // Returns true if the timestamps held by TimestampRange represent a date/time
@@ -206,6 +220,28 @@ type Timestamp struct {
   IsRange bool
   Repeat *Repeat
   RawCookie string
+}
+
+func (t *Timestamp) String() string {
+  out := fmt.Sprintf("%d-%d-%d %s", t.Year(), t.Month(), t.Day(), t.Weekday())
+  if !t.DateOnly {
+    out += fmt.Sprintf(" %02d:%02d", t.Start.Hour(), t.Start.Minute())
+  }
+
+  if !t.DateOnly && !t.End.IsZero() {
+    out += fmt.Sprintf("-%02d:%02d", t.End.Hour(), t.End.Minute()) 
+  }
+
+  enclose := "<%s>"
+  if !t.Active {
+    enclose = "[%s]"
+  }
+
+  return fmt.Sprintf(enclose, out)
+}
+
+func (t *Timestamp) Strings() []string {
+  return []string{t.String()}
 }
 
 func NewTimestamp(start time.Time, opts... NewTimestampOpt) *Timestamp {
@@ -375,6 +411,10 @@ type Repeat struct {
   RelativeMonth bool
 }
 
+func (r *Repeat) String() string {
+  return fmt.Sprintf("%s%d%s", r.Kind.String(), r.IntervalAmount, r.Interval.String())
+}
+
 type RepeatKind string
 
 const (
@@ -439,7 +479,7 @@ func NewNilStartTimeError() NilStartTimeError {
 type NilTimestampsError struct {}
 
 func (NilTimestampsError) Error() string {
-  return "Method was called with all Timestamps being nil."
+  return "Method was called with one or all Timestamps being nil."
 }
 
 func NewNilTimestampsError() NilTimestampsError {

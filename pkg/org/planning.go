@@ -1,13 +1,35 @@
 package org
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // Planning elements directly follow headlines with no preceeding newlines
 // and are marked by a keyword of "SCHEDULED", "DEADLINE", or "CLOSED", a
 // colon, and a timestamp object.
 type Planning struct {
-  Kind PlanningKind
+  PlanningKind PlanningKind
   TimestampRangeOrSexp TimestampRangeOrSexp
+}
+
+func (p Planning) Kind() ElementKind {
+  return ELEMENT_PLANNING
+}
+
+func (p Planning) IsGreaterElement() bool {
+  return false
+}
+
+func (p *Planning) String() string {
+  return fmt.Sprintf("%s: %s", p.PlanningKind.String(), p.TimestampRangeOrSexp.String())
+}
+
+func (p *Planning) Strings() []string {
+  return []string{
+    fmt.Sprintf("%s:", p.PlanningKind.String()),
+    p.TimestampRangeOrSexp.String(),
+  }
 }
 
 type PlanningKind string
@@ -20,6 +42,10 @@ const (
   PLANNING_SCHEDULED PlanningKind = "SCHEDULED"
   PLANNING_DEADLINE  PlanningKind = "DEADLINE"
 )
+
+func (pk PlanningKind) String() string {
+  return string(pk)
+}
 
 type TimestampRangeOrSexp interface {
   // Should return out of either TIMESTAMP_KIND_TIMESTAMP or TIMESTAMP_KIND_SEXP
@@ -43,7 +69,8 @@ type TimestampRangeOrSexp interface {
   // range, if a time range is set. Else, returns 0, 0, 0.
   EndTime() (int, int, int)
 
-  // Returns an array of timestamp elements 
+  String() string
+  Strings() []string
 }
 
 type TimestampKind string

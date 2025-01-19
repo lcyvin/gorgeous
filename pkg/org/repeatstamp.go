@@ -1,6 +1,7 @@
 package org
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -75,9 +76,42 @@ func NewRepeatStamp(start time.Time, cfg RepeatConfig, opts... NewTimestampOpt) 
   return rs
 }
 
+func (rs *RepeatStamp) String() string {
+  out := fmt.Sprintf("%d-%d-%d %s", rs.Year(), rs.Month(), rs.Day(), rs.Weekday())
+
+  if !rs.DateOnly {
+    out += fmt.Sprintf(" %02d:%02d", rs.Start.Hour(), rs.Start.Minute())
+  }
+
+  if !rs.DateOnly && !rs.End.IsZero() {
+    out += fmt.Sprintf("-%02d:%02d", rs.End.Hour(), rs.End.Minute())
+  }
+
+  out += fmt.Sprintf(" %s", rs.Repeat.String())
+
+  enclose := "<%s>"
+  if !rs.Active {
+    enclose = "[%s]"
+  }
+
+  return fmt.Sprintf(enclose, out)
+}
+
+func (rs *RepeatStamp) Strings() []string {
+  return []string{rs.String()}
+}
+
 func (rs *RepeatStamp) InWindow(start, end time.Time) bool {
+  start = start.In(rs.Start.Location())
+  end = end.In(rs.Start.Location())
+
+  // using Shiftn() instead of ShiftUntilAfter() because ShiftUntilAfter() is
+  // exclusive, and something could be partially in-window.
+  afterStart := rs.ShiftUntil(start).Shiftn(1)
   
-  return false
+  // Because we're not returning anything except a boolean value, we only need
+  // to test that the next shift in the pattern will be within the window.
+  return afterStart.Start.Before(end) && afterStart.End.After(start)
 }
 
 // Implements the Shift() function as required by api.Repeater
@@ -182,6 +216,9 @@ func (rs *RepeatStamp) ShiftUntilAfter(t time.Time) *RepeatStamp {
   before := rs.ShiftUntil(t)
   after := before.Shiftn(1)
 
+  // Technically, we should only need to check t.After(after.Start), but I'm
+  // keeping the second check in for safety in case an impossible date range is
+  // supplied somehow.
   if t.After(after.Start) && t.After(after.End) {
     after.ShiftUntilAfter(t)
   }
