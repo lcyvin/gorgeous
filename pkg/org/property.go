@@ -64,7 +64,7 @@ func (p *Property) RestrictionValues() []string {
     }
 
     if c == ' ' && !brktOpen {
-      out = append(out)
+      out = append(out, val)
       val = ""
       continue
     }

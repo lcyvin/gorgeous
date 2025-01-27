@@ -331,11 +331,7 @@ func (ts *Timestamp) InWindow(start, end time.Time) bool {
   startsWithinWindow := ts.Start.After(start) && ts.Start.Before(end)
   endsWithinWindow := ts.End.Before(end) && ts.End.After(start)
 
-  if startsWithinWindow || endsWithinWindow {
-    return true
-  }
-
-  return false
+  return startsWithinWindow || endsWithinWindow
 }
 
 func (ts Timestamp) Kind() TimestampKind {

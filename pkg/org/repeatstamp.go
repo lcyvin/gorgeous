@@ -101,6 +101,10 @@ func (rs *RepeatStamp) Strings() []string {
   return []string{rs.String()}
 }
 
+// Returns a boolean value describing if the repeating event may occur within the
+// window defined by start and end, inclusively. This does not consider the
+// current state of the timestamp, as repeated events in vanilla orgmode are
+// considered to repeat ad infinitum.
 func (rs *RepeatStamp) InWindow(start, end time.Time) bool {
   start = start.In(rs.Start.Location())
   end = end.In(rs.Start.Location())
@@ -109,9 +113,10 @@ func (rs *RepeatStamp) InWindow(start, end time.Time) bool {
   // exclusive, and something could be partially in-window.
   afterStart := rs.ShiftUntil(start).Shiftn(1)
   
-  // Because we're not returning anything except a boolean value, we only need
-  // to test that the next shift in the pattern will be within the window.
-  return afterStart.Start.Before(end) && afterStart.End.After(start)
+  // since afterStart should be the next repetition immediately following
+  // the result of ShiftUntil(), which is exclusive, we can use its internally
+  // held Timestamp struct's InWindow func to perform the actual window check.
+  return afterStart.Timestamp.InWindow(start, end)
 }
 
 // Implements the Shift() function as required by api.Repeater
@@ -157,6 +162,16 @@ func (rs *RepeatStamp) Shift(t time.Time) *RepeatStamp {
   }
 }
 
+// Handles the shift interval <n> times, ignoring cookie behavior. Can be used
+// to extrapolate future dates based on current repeatstamp states. Note that
+// cookie behavior will modify these dates once they are repeated, so the values
+// are only valid at until a timestamp is updated. Notably, the .+ cookie, mapped
+// to org.REPEAT_KIND_SHIFT_FUTURE_RELATIVE, will acquire a new timestamp relative
+// to the time the event was updated, rather than its initial set value. 
+// Similarly, the + cookie does not perform additional shifting to bring the
+// timestamp into the future, only ever performing one shift on the timestamp.
+// Ipso facto, that timestamp may remain in the past if it has not been actioned
+// for some time. 
 func (rs *RepeatStamp) Shiftn(i int) *RepeatStamp {
   amt := rs.Repeat.IntervalAmount
   switch rs.Repeat.Interval {
