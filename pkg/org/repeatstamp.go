@@ -76,6 +76,9 @@ func NewRepeatStamp(start time.Time, cfg RepeatConfig, opts... NewTimestampOpt) 
   return rs
 }
 
+// Returns a standard representation of a repeatstamp definition in orgmode.
+// This is primarily intended for debug output, and writers should implement
+// more robust handlers for this.
 func (rs *RepeatStamp) String() string {
   out := fmt.Sprintf("%d-%d-%d %s", rs.Year(), rs.Month(), rs.Day(), rs.Weekday())
 
@@ -97,6 +100,7 @@ func (rs *RepeatStamp) String() string {
   return fmt.Sprintf(enclose, out)
 }
 
+// Returns a list containing one element, which is the result of RepeatStamp.String()
 func (rs *RepeatStamp) Strings() []string {
   return []string{rs.String()}
 }
@@ -195,6 +199,9 @@ func (rs *RepeatStamp) Shiftn(i int) *RepeatStamp {
   }
 }
 
+// ShiftUntil returns a new pointer to a RepeatStamp whose timestamp is exactly
+// before the supplied time. That is, its scheduled start and end occur BEFORE
+// the time passed to `t`. 
 func (rs *RepeatStamp) ShiftUntil(t time.Time) *RepeatStamp {
   nrs := *rs
   one := rs.Shiftn(1)
