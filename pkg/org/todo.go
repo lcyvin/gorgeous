@@ -176,7 +176,7 @@ func (ts *TodoSettings) fAdd(seq *TodoSequence) (*TodoSettings, error) {
 }
 
 func (ts *TodoSettings) fMapIntersects(left, right map[string]string) (bool, string) {
-  for k, _ := range right {
+  for k := range right {
     if v, ok := left[k]; ok {
       return true, v
     }
