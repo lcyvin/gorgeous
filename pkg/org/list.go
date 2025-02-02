@@ -1,7 +1,6 @@
 package org
 
 import (
-  "fmt"
 	"strconv"
 	"strings"
 )
@@ -67,38 +66,11 @@ func (cbs CheckBoxState) String() string {
   return string(cbs)
 }
 
-type Completeness struct {
-  Done int
-  Total int
-  Kind CompletenessKind
-}
-
-func (c *Completeness) FractionString() string {
-  return fmt.Sprintf("[%d/%d]", c.Done, c.Total)
-}
-
-func (c *Completeness) PercentString() string {
-  div := float64(c.Done)/float64(c.Total)
-  return fmt.Sprintf("[%.0f%%]", div*100)
-}
-
-type CompletenessKind string
-
-const (
-  COMPLETENESS_FRACTION CompletenessKind = "/"
-  COMPLETENESS_PERCENT CompletenessKind = "%"
-)
-
-func (ck CompletenessKind) String() string {
-  return string(ck)
-}
-
 type ListItem struct {
   Cookie string
   Numerator int
   Elements []Element
   CheckBox *CheckBox
-  Completeness *Completeness
 }
 
 func (li ListItem) Kind() ElementKind {
